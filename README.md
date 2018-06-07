@@ -25,22 +25,23 @@ excel_data = pandas.read_excel('FILE PATH', names=["Country", "Pho", "Ramen", "S
 data = excel_data.to_dict('records')[1:]
 ```
 
-Once we have our data, which is a list of dictionaries, which each contain the country and the percentage representing how many google searches were made for Pho, Ramen, or Soba, we can import it to our __init__.py file where we are creating the app's layout and table.
+Once we have our data, which is a list of dictionaries, which each contain the country and the percentage representing how many google searches were made for Pho, Ramen, or Soba, we can import it to our `__init__.py` file where we are creating the app's layout and table.
 
 ## Creating a Data Table with Dash
 
 Now that we have our information we can begin making our layout. 
 
-Unlike graphs, tables are HTML elements. So, we will add a table to our layout by using the dash_html_components module. So we will need to make sure we first import dash, then dash_html_corecomponents, and our data from the `food_interest_data.py` file. Since we are keeping up with our package structure for our dash app our imports for other files will follow the `from [PACKAGE NAME].[FILE NAME] import [OBJECT NAME]` format. So, to import our `data` our imports will look like the following:
+Unlike graphs, tables are HTML elements. So, we will add a table to our layout by using the dash_html_components module. We will need to make sure we first import dash, dash_core_components, and our data from the `food_interest_data.py` file. Since we are keeping up with our package structure for our dash app, our imports for other files will follow the `from [PACKAGE NAME].[FILE NAME] import [OBJECT NAME]` format. Therefore, to import our `data` our imports will look like the following:
 
 ```python
 import dash
+import dash_core_components as dcc
 import dash_html_components as html
 
 from dashwithtables.food_interest_data import data
 ```
 
-Then, we will instantiate our new instance of our dash app and give it a url_base_pathname of '/', as a good practice so we signal to ourselves and other developers where we would like for our dashboard to display.
+Then, we will instantiate our new instance of our dash app and give it a url_base_pathname of '/', as a good practice so we signal to ourselves and to other developers where we would like our dashboard to be displayed.
 
 ```python
 app = dash.Dash(__name__, url_base_pathname='/')
@@ -48,14 +49,16 @@ app = dash.Dash(__name__, url_base_pathname='/')
 
 Let's add our layout! We will want an `h3` tag that reads `"Interest in Pho, Ramen, and Soba by Country according to Google Search from 01/2004 - 06/2018"`, and beneath that we will want our table.
 
-Tables are easy to instantiate. We simply use html.Table(`children=[SOMECODE]`). Tables have several rows, the first of which is the header for the rest of the table, or the name of the columns. Since each dictionary has the name of the column pointing to its value `{'Country': 'Japan', 'Pho': 0.04, 'Ramen': 0.72, 'Soba': 0.24}` we, can create a function that will create the header row for us. Let's define a function called `generate table` that will create the dash html components and rows we need for our table. We can then call this function in our layout, to, well... generate the table! Remember to give it an argument that is the data we are importing from our `food_interest_data` file. We can give this function a default argument of our data object. 
+Tables are easy to instantiate. We simply use html.Table(`children=[SOMECODE]`). Tables have several rows, the first of which is the header for the rest of the table, or the name of the columns. Since each dictionary has the name of the column pointing to its value `{'Country': 'Japan', 'Pho': 0.04, 'Ramen': 0.72, 'Soba': 0.24}` we, can create a function that will create the header row for us.
+
+Above our layout, let's define a function called `generate_table` that will create the Dash html components and rows we need for our table. We can then call this function in our layout, to, well... generate the table! We'll pass this function the `data` we imported from the `food_interest_data.py` file. Let's make this parameter a default argument. 
 
 ```python
 def generate_table(table_data=data):
-html.Tr(id='food-table', children=[html.Th(col) for col in dataframe[0].keys()])]
+    return html.Tr(id='food-table', children=[html.Th(col) for col in data[0].keys()])
 ```
 
-First we create a table row (i.e. `html.Tr`). Then we are creating the children for that first row, which will be the table headers (i.e. `html.Th`). To get each column name as a table header we can use one element from our list of data and get the keys (i.e. `data[0].keys()`). Then we use list compresion to push each new table header into the array of children for the first row.
+First, we create a table row (i.e. `html.Tr`). Then, we are creating the children for that first row, which will be the table headers (i.e. `html.Th`). To get each column name as a table header we can use one element from our list of data and get the keys (i.e. `data[0].keys()`). Then we use list comprehension to push each new table header into the array of children for the first row.
 
 If we look at our table now, it should look something like the folling:
 
@@ -73,25 +76,43 @@ We made this first row somewhat manually since there is only one. However, we ar
 [html.Tr(children=[somecode]) for data_dict in data]
 ```
 
-We haven't yet told our table rows what they are going to contain. They aren't going to contain table headers, since they aren't going to be the first row. They will contain table cells or table data (i.e. html.Td(`[somecode]`)). 
+We haven't yet told our table rows what they are going to contain. They aren't going to contain table headers, since they will make up the body of our table and not the first row. These table cells should have our table data (i.e. html.Td(`[somecode]`)). A first naive approach might be to do the following: 
 
 ```python
 # creating a table row for each dictionary in our list of data
 [html.Tr(children=[html.Td(data_dict['country']), html.Td(data_dict['Pho']), html.Td(data_dict['Ramen']), html.Td(data_dict['Soba'])]) for data_dict in data]
 ```
 
-Our first naive approach might be to do the above. We have seen what the data looks like and know there are 4 columns and we can just create four table data elements for each row and get the value from our dictionary by hardcoding the names of each key like we do above. However, if we wanted to make this code a but more re-usable and programmatic, we would need to change this. Plus, if our excel ever changes by adding a column or just changing one of the column names, we would have to then change this function. So, let's see how we could make this more programmatic.
+We know what our data looks like.  There are four columns and we could create four table data elements for each row and get the value from our dictionary by hardcoding the names of each key as we do above. However, what happens if our data inputs ever change?  For example, the person providing us this data could decide to change the name of a column or add or delete certain columns.  If such a scenario played out, our `generate_table` function would break.  Let's add some abstraction to make this function more flexible and reusable.
 
 ```python
 # creating a table row for each dictionary in our list of data
 [html.Tr(children=[html.Td(data_dict[column]) for column in data_dict.keys()]) for data_dict in data]
 ```
 
-Above we are creating a dictionary keys (`dict_keys`) object and iterating over each element, which represent the name of each key in the dictionary, and using it to create a table cell with the value from each key or column with list comprehension. Now, our code is not only more concise, but it is autmatically generating a table cell for each column in the table and accurately giving it the value of that cell. 
+Above we are creating a dictionary keys (`dict_keys`) object and iterating over each element, which represent the name of each key in the dictionary, and using it to create a table cell with the value from each key or column with list comprehension. Now our code is more concise, and it automatically generates a table cell for each column in the table and gives it the value of that cell. 
 
-This should create all the cells we need for our table. However, we have headers in a list too, so, if we keep our code as is, we will get an error since we will have our table's children attribute pointing to two separate lists. To fix this we will need to combine these lists into one. One way of combining lists is simply adding the two together. So, we simply need to add a `+` between our two lists.
+With that process complete, we should have created all the cells we need for our table.
 
-Now, if we look at our dashboard in the browser we should have a fully filled-in table!
+However, we have a headers list too.  If we keep our code as is, we will get an error since we will have our table's children attribute pointing to two separate lists. To fix this we will need to conjoin these two lists. One way of combining lists is simply adding the two together with an addition symbol (`+`).
+
+Our completed function looks like the following:
+
+```python
+def generate_table(table_data=data):
+    return html.Table(id='food-table', children=
+        # create table headers (the first table row)
+        [html.Tr(id='headers', children=[html.Th(col) for col in table_data[0].keys()])]
+        # combine the table headers and table data lists into one list
+        +
+        # create more table rows containing table cells with all our data
+        [html.Tr(id='row-data', children=[
+            html.Td(data_dict[column]) for column in data_dict.keys()
+        ]) for data_dict in table_data]
+    )
+```
+
+Now when we look at our dashboard in the browser, we should have a fully filled-in table!
 
 > <h3>Interest in Pho, Ramen, and Soba by Country according to Google Search from 01/2004 - 06/2018</h3>
 > <table>
@@ -107,23 +128,25 @@ Now, if we look at our dashboard in the browser we should have a fully filled-in
     <tr><td>United States</td><td>0.51</td><td>0.45</td><td>0.04</td></tr>
 </table>
 
-## Creating a Callback Function in Dash
+## Add a Callback Function to Sort Table Data
 
-Great, we now have a table that is displaying the countries and the comparative percentages for whic they query google for Pho, Ramen, and Soba. What if we'd like to sort this information? First we will need to add in a dropdown, which is a dcc component. We can add the following drop down which will give us 4 `options` which are elements that are the children of a dropdown. The options have a `label`, the text you want displayed, and a `value`, the string or other piece of data you want to use to represent that selection. In this case ours will be the same as we will want our drop down selections to indicate the column we want to filter by.
+Great, we now have a table that displays countries and the percentages for which they query Google for Pho, Ramen, and Soba. What if we'd like to sort this information? 
+
+First, we will need to add a dropdown, which is a dcc component. Our dropdown should give the user four `options` to select since we want to sort by any of the four columns in our table.  Each option should have a `label`, the text you want displayed, and a `value`, the string or other piece of data you want to use to represent that selection. In this case, our label and value will be the same because we want our dropdown labels to be the same name as the columns we wish to sort by.  Let's add our dropdown, featured below, to our `app.layout`.  Also, let's make it the first element of the children list so that it appears at the top of our web page.
 
 ```python
 dcc.Dropdown(
         id='sort-by-selector',
         options=[
-            {'label': 'None', 'value': None},
             {'label': 'Country', 'value': 'Country'},
             {'label': 'Pho', 'value': 'Pho'},
             {'label': 'Ramen', 'value': 'Ramen'},
             {'label': 'Soba', 'value': 'Soba'}
         ],
         value="Country"
+    ),
 ```
-Like all other elements, we give the dropdown an `id`. The `value` property will be the starting value for the dropdown.
+Like all other elements, we give the dropdown an `id`. The `value` property will be the starting value for the dropdown.  Since we set this initial value to "country", we can expect the initial state of our table to be sorted by country in alphabetical order.
 
 Now that we have added a dropdown to the top of our app's layout, we can interact with our table by using a callback. A callback is defined using a decorator on the app, similar to a route.
 
@@ -133,15 +156,15 @@ Now that we have added a dropdown to the top of our app's layout, we can interac
 )
 ```
 
-Inside our call back, we decide what the callback is going to take in as the value we are looking to change and the output, or where we would like to make our change. Our dropdown is going to have the value by which we want to filter our table, and the table (id='food-table') is going to be the element we want to alter. 
+Inside our callback, we decide what it should *take in* as the value we are looking to change and the *output*, or where we would like to make our change. Our dropdown is going to have the value by which we want to filter our table, and the table (id='food-table') is going to be the element we want to alter. 
 
-First we will need to import the `Input` and `Output` modules from `dash.dependencies`. So, let's update our imports to include that.
+First, we need to import the `Input` and `Output` modules from `dash.dependencies`. Let's update our imports at the top of the file.
 
 ```python
 from dash.dependencies import Input, Output
 ```
 
-Now let's star to fill in our callback function. 
+Then, let's to fill in our callback function. 
 
 ```python
 @app.callback(
@@ -150,14 +173,14 @@ Now let's star to fill in our callback function.
 )
 ```
 
-First we define which element is going to take the output and which attribute we are going to overwrite. Then we define the input for our callback in a list. Next, we define our function and how we would like to manipulate our data. We will call this function `sort_table` and pass it the an arugment that is going to be the value from the dropdown with the id `sort-by-selector`. We can call this argument whatever we want, but let's name it `input_value` for now.
+First we define which element is going to take the output and which attribute we are going to overwrite. Then we define the input for our callback in a list. Next, we define our function and how we would like to manipulate our data. We will call this function `sort_table` and pass it the an argument that is going to be the value from the dropdown with the id `sort-by-selector`. We can call this argument whatever we want, but let's name it `input_value` for now.
 
 ```python
 def sort_table(input_value):
     # some code
 ```
 
-The input value is going to be the value of whichever `option` we select in our dropdown element. So, our sort logiv will look something like this:
+The input value is going to be the value of whichever `option` we select in our dropdown element. So, our sorting logic will look something like this:
 
 ```python
 # datum is a single dictionary
@@ -180,7 +203,7 @@ Now when we make a selection our table will sort by the selection -- the default
 
 Uh oh! If we look at our terminal we can see that this callback is firing over and over! 
 
-To fix this, we will need to change a bit how we structured things. Instead of calling `generate_table` in our app's layout, we will create a new `html.Div` element named `table-container` that will now recieve the output value of our callback -- which will get invoked once, when the page loads and everytime we make a selection in the dropdown. We then need to update our callback definition's output `id` to be `table-container`. Once we do both of these changes our table should be sorting and our terminal should be working a bit easier.
+To fix this, we will need to change a bit how we structured things. Instead of calling `generate_table` in our app's layout, we will create a new `html.Div` element named `table-container` that will now receive the output value of our callback -- which will get invoked once when the page loads and anytime we make a selection in the dropdown. We then need to update our callback definition's output `id` to be `table-container`. Once we make both of these changes, our table's sorting feature should be functioning and our terminal.
 
 ```python
 app.layout = html.Div(children=[
@@ -210,4 +233,4 @@ def sort_table(input_value):
 
 ## Summary
 
-Great work! In this lab, we practiced creating a dash app, using both dash corecomponents and dash html components to create a table on our app's dashboard. Then we defined a callback that programmatically sorted our app's table by the selected column from our dropdown element.
+Great work! In this lab, we practiced creating a Dash app, using both Dash core components and Dash HTML components to create a table on our app's dashboard. Then, we defined a callback that programmatically sorted our app's table by the column selected from our dropdown element.
