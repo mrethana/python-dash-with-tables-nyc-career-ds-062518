@@ -21,7 +21,7 @@ import pandas
 excel_data = pandas.read_excel('FILE PATH', names=["Country", "Pho", "Ramen", "Soba"])
 
 # removing the first line of data that contains the headers
-# and returning the remating data in a list of dictionaries
+# and returning the remaining data in a list of dictionaries
 data = excel_data.to_dict('records')[1:]
 ```
 
@@ -60,7 +60,7 @@ def generate_table(table_data=data):
 
 First, we create a table row (i.e. `html.Tr`). Then, we are creating the children for that first row, which will be the table headers (i.e. `html.Th`). To get each column name as a table header we can use one element from our list of data and get the keys (i.e. `data[0].keys()`). Then we use list comprehension to push each new table header into the array of children for the first row.
 
-If we look at our table now, it should look something like the folling:
+If we look at our table now, it should look something like the following:
 
 > <h3>Interest in Pho, Ramen, and Soba by Country according to Google Search from 01/2004 - 06/2018</h3>
 > <table>
